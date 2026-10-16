@@ -1,0 +1,176 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version '1.17.14'
+}
+
+version = '1.6.14'
+group = 'it.lia.ninecrowns'
+
+base {
+    archivesName = 'ninecrowns-26.3'
+}
+
+repositories {
+    maven { url = 'https://maven.fabricmc.net/' }
+    mavenCentral()
+}
+
+dependencies {
+    minecraft 'com.mojang:minecraft:26.3'
+    implementation 'net.fabricmc:fabric-loader:0.19.5'
+    implementation 'net.fabricmc.fabric-api:fabric-api:0.161.0+26.3'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version
+    }
+}
+
+tasks.register('verifyProjectLayout') {
+    doLast {
+        def required = [
+            file('src/main/java/it/lia/ninecrowns/Config.java'),
+            file('src/main/java/it/lia/ninecrowns/LegendaryItem.java'),
+            file('src/main/java/it/lia/ninecrowns/CrownEffects.java'),
+            file('src/main/java/it/lia/ninecrowns/ModItems.java'),
+            file('src/main/java/it/lia/ninecrowns/NineCrowns.java'),
+            file('src/main/java/it/lia/ninecrowns/Recipes.java'),
+            file('src/main/java/it/lia/ninecrowns/Roster.java'),
+            file('src/main/java/it/lia/ninecrowns/SpearItem.java'),
+            file('src/main/java/it/lia/ninecrowns/WorldData.java'),
+            file('src/main/java/it/lia/ninecrowns/mixin/CrafterBlockMixin.java'),
+            file('src/main/java/it/lia/ninecrowns/mixin/CraftingMenuMixin.java'),
+            file('src/main/java/it/lia/ninecrowns/mixin/EffectAccessor.java'),
+            file('src/main/java/it/lia/ninecrowns/mixin/EquipmentMixin.java'),
+            file('src/main/java/it/lia/ninecrowns/mixin/EntityMixin.java'),
+            file('src/main/java/it/lia/ninecrowns/mixin/ItemEntityMixin.java'),
+            file('src/main/java/it/lia/ninecrowns/mixin/ResultSlotMixin.java'),
+            file('src/main/java/it/lia/ninecrowns/mixin/SlotMixin.java'),
+            file('src/main/resources/fabric.mod.json'),
+            file('src/main/resources/ninecrowns.mixins.json'),
+            file('src/main/resources/data/ninecrowns/recipe/all_heads.json'),
+            file('src/main/resources/data/ninecrowns/recipe/empty_crown.json'),
+            file('src/main/resources/data/ninecrowns/recipe/op_sword.json'),
+            file('src/main/resources/data/ninecrowns/recipe/op_spear.json'),
+            file('src/main/resources/data/ninecrowns/recipe/emperor_crown.json'),
+            file('src/main/resources/assets/ninecrowns/items/all_heads.json'),
+            file('src/main/resources/assets/ninecrowns/models/item/all_heads.json'),
+            file('src/main/resources/assets/ninecrowns/textures/item/all_heads.png'),
+            file('src/main/resources/assets/ninecrowns/textures/item/op_sword.png'),
+            file('src/main/resources/assets/ninecrowns/textures/item/op_spear.png'),
+            file('src/main/resources/assets/ninecrowns/models/item/emperor_crown_head.json')
+        ]
+        def missing = required.findAll { !it.isFile() }
+        if (!missing.isEmpty()) {
+            throw new GradleException('PROJECT STRUCTURE ERROR. Missing: ' + missing.join(', '))
+        }
+
+        def roster = file('src/main/java/it/lia/ninecrowns/Roster.java').text
+        def config = file('src/main/java/it/lia/ninecrowns/Config.java').text
+        def items = file('src/main/java/it/lia/ninecrowns/ModItems.java').text
+        def main = file('src/main/java/it/lia/ninecrowns/NineCrowns.java').text
+        def spearItem = file('src/main/java/it/lia/ninecrowns/SpearItem.java').text
+        def world = file('src/main/java/it/lia/ninecrowns/WorldData.java').text
+        def recipes = file('src/main/java/it/lia/ninecrowns/Recipes.java').text
+        def craftMixin = file('src/main/java/it/lia/ninecrowns/mixin/CraftingMenuMixin.java').text
+        def crafterMixin = file('src/main/java/it/lia/ninecrowns/mixin/CrafterBlockMixin.java').text
+        def mixins = file('src/main/resources/ninecrowns.mixins.json').text
+
+        assert roster.contains('public static final int SIZE = 10')
+        assert roster.contains('unique.size() != SIZE - 1')
+        assert roster.contains('unique.contains(crafter)')
+        assert roster.contains('expected.remove(crafter)')
+
+        assert config.contains('c.swordDamage = 14')
+        assert config.contains('c.spearMeleeDamage = 10')
+        assert config.contains('c.lightningRechargeSeconds = 30')
+        assert config.contains('c.lightningVisualBolts = 4')
+        assert config.contains('c.lightningDamage = 16')
+
+        assert items.contains('ALL_HEADS')
+        assert items.contains('register("all_heads", Item::new)')
+        assert items.contains('mutable.set(sharpness, 5)')
+        assert items.contains('mutable.set(lunge, 3)')
+        assert items.contains('mutable.set(protection, 10)')
+
+        assert recipes.contains('private static final int[] ALL_HEAD_SLOTS = {0, 1, 2, 3, 4, 5, 6, 7, 8}')
+        assert recipes.contains('private static final int ALL_HEADS_SLOT = 1')
+        assert recipes.contains('private static final int[] DIAMOND_SLOTS = {0, 2, 3, 5, 6, 7, 8}')
+        assert recipes.contains('craftAllHeads')
+        assert recipes.contains('ModItems.ALL_HEADS')
+        assert recipes.contains('Items.DIAMOND_BLOCK')
+
+        assert world.contains('spearLightningNextUse')
+        assert world.contains('consumeLightning(long now, long cooldownTicks)')
+        assert world.contains('tryActivate(Item item)')
+        assert world.contains('release(Item item)')
+        assert world.contains('root.add("active", active)')
+        assert world.contains('Migration from the 9-player 1.6.11 world')
+
+        assert main.contains('MAX_TOTEMS = 4')
+        assert main.contains('MAX_ENDER_PEARLS = 16')
+        assert main.contains('Items.TOTEM_OF_UNDYING')
+        assert main.contains('Items.ENDER_PEARL')
+        assert main.contains('Permissions.COMMANDS_MODERATOR')
+        assert main.contains('giveAllHeadsTestKit')
+        assert main.contains('new ItemStack(Items.DIAMOND_BLOCK, 7)')
+        assert main.contains('EntityTypes.LIGHTNING_BOLT.create')
+        assert main.contains('bolt.setVisualOnly(true)')
+        assert main.contains('level.damageSources().playerAttack(player)')
+        assert !main.contains('EntityType.LIGHTNING_BOLT')
+        assert !main.contains('hasPermission(2)')
+        assert !main.contains('Commands.hasPermission(2)')
+        assert !main.contains('Items.MACE')
+
+        assert spearItem.contains('player.isShiftKeyDown()')
+        assert spearItem.contains('NineCrowns.lightning(sp)')
+        assert craftMixin.contains('Recipes.allHeadsShape(grid)')
+        assert craftMixin.contains('Recipes.craftAllHeads(sp, grid)')
+        assert crafterMixin.contains('path.equals("all_heads")')
+
+        assert mixins.contains('CrafterBlockMixin')
+        assert mixins.contains('SlotMixin')
+        assert mixins.contains('ItemEntityMixin')
+        assert mixins.contains('EntityMixin')
+        assert file('src/main/java/it/lia/ninecrowns/mixin/ItemEntityMixin.java').text.contains('self.getAge() >= 6000')
+
+        def allText = fileTree('src') {
+            include '**/*.java', '**/*.json'
+        }.files.collect { it.getText('UTF-8').toLowerCase(Locale.ROOT) }.join('\n')
+        assert !allText.contains('stringduper')
+        assert !allText.contains('string duper')
+        assert !allText.contains('tripwirehook')
+
+        def allHeadsRecipe = file('src/main/resources/data/ninecrowns/recipe/all_heads.json').text
+        def swordRecipe = file('src/main/resources/data/ninecrowns/recipe/op_sword.json').text
+        def spearRecipe = file('src/main/resources/data/ninecrowns/recipe/op_spear.json').text
+        def crownRecipe = file('src/main/resources/data/ninecrowns/recipe/emperor_crown.json').text
+        assert allHeadsRecipe.contains('"HHH"')
+        assert swordRecipe.contains('"DAD"') && swordRecipe.contains('"DSD"')
+        assert spearRecipe.contains('"DAD"') && spearRecipe.contains('"DSD"')
+        assert crownRecipe.contains('"DAD"') && crownRecipe.contains('"DCD"')
+
+        def crownHeadModel = file('src/main/resources/assets/ninecrowns/models/item/emperor_crown_head.json').text
+        assert crownHeadModel.contains('4.5')
+        assert crownHeadModel.contains('0.82')
+
+        println 'Nine Crowns 1.6.14 source rules verified.'
+    }
+}
+
+tasks.named('compileJava') {
+    dependsOn tasks.named('verifyProjectLayout')
+}
+
+// Fabric Loom adds the playable remapped JAR to the normal build task.

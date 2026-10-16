@@ -1,0 +1,14 @@
+{
+  "layers": {
+    "humanoid": [
+      {
+        "texture": "ninecrowns:emperor_crown"
+      }
+    ],
+    "humanoid_baby": [
+      {
+        "texture": "ninecrowns:emperor_crown"
+      }
+    ]
+  }
+}

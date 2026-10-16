@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "group": "ninecrowns_legendary",
+  "pattern": [
+    "DAD",
+    "DCD",
+    "DDD"
+  ],
+  "key": {
+    "D": "minecraft:diamond_block",
+    "A": "ninecrowns:all_heads",
+    "C": "ninecrowns:empty_crown"
+  },
+  "result": {
+    "id": "ninecrowns:emperor_crown",
+    "count": 1
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "ninecrowns_heads",
+  "pattern": [
+    "HHH",
+    "HHH",
+    "HHH"
+  ],
+  "key": {
+    "H": "minecraft:player_head"
+  },
+  "result": {
+    "id": "ninecrowns:all_heads",
+    "count": 1
+  }
+}

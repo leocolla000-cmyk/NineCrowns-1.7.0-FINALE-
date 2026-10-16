@@ -1,0 +1,14 @@
+{
+  "layers": {
+    "humanoid": [
+      {
+        "texture": "ninecrowns:empty_crown"
+      }
+    ],
+    "humanoid_baby": [
+      {
+        "texture": "ninecrowns:empty_crown"
+      }
+    ]
+  }
+}

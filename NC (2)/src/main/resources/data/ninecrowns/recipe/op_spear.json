@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "group": "ninecrowns_legendary",
+  "pattern": [
+    "DAD",
+    "DSD",
+    "DDD"
+  ],
+  "key": {
+    "D": "minecraft:diamond_block",
+    "A": "ninecrowns:all_heads",
+    "S": "minecraft:netherite_spear"
+  },
+  "result": {
+    "id": "ninecrowns:op_spear",
+    "count": 1
+  }
+}
