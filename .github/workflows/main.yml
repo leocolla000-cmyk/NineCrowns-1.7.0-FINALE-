@@ -1,0 +1,131 @@
+name: Build NineCrowns 1.6.14
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Find NineCrowns 1.6.14 project
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT_FILE=""
+
+          while IFS= read -r candidate; do
+            if grep -q "version = '1.6.14'" "$candidate" \
+               && grep -q "minecraft 'com.mojang:minecraft:26.3'" "$candidate"; then
+              PROJECT_FILE="$candidate"
+              break
+            fi
+          done < <(find . -maxdepth 6 -type f -name build.gradle | sort)
+
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "ERROR: non trovo il build.gradle di NineCrowns 1.6.14."
+            find . -maxdepth 6 -type f -name build.gradle -print || true
+            exit 1
+          fi
+
+          PROJECT_DIR="$(dirname "$PROJECT_FILE")"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Progetto trovato in: $PROJECT_DIR"
+
+          test -f "$PROJECT_DIR/settings.gradle"
+          test -f "$PROJECT_DIR/gradle.properties"
+          test -f "$PROJECT_DIR/src/main/java/it/lia/ninecrowns/NineCrowns.java"
+          test -f "$PROJECT_DIR/src/main/resources/fabric.mod.json"
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Setup Gradle 9.6.0
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.6.0'
+          cache-disabled: true
+
+      - name: Verify toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --version
+          grep -n "fabric-loom.*1.17.14" "$PROJECT_DIR/build.gradle"
+          grep -n "minecraft 'com.mojang:minecraft:26.3'" "$PROJECT_DIR/build.gradle"
+          grep -n "fabric-api:0.161.0+26.3" "$PROJECT_DIR/build.gradle"
+
+      - name: Build NineCrowns
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p "$PROJECT_DIR" clean build --stacktrace --no-daemon
+
+      - name: Find and verify playable JAR
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "JAR prodotti:"
+          find "$PROJECT_DIR/build/libs" -maxdepth 1 -type f -name '*.jar' -print || true
+
+          JAR="$(find "$PROJECT_DIR/build/libs" -maxdepth 1 -type f \
+            -name 'ninecrowns-26.3-1.6.14.jar' \
+            ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
+
+          if [ -z "${JAR:-}" ]; then
+            JAR="$(find "$PROJECT_DIR/build/libs" -maxdepth 1 -type f \
+              -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)"
+          fi
+
+          if [ -z "${JAR:-}" ]; then
+            echo "ERROR: JAR giocabile non trovato."
+            exit 1
+          fi
+
+          jar tf "$JAR" > "$RUNNER_TEMP/ninecrowns-jar-contents.txt"
+          CONTENTS="$RUNNER_TEMP/ninecrowns-jar-contents.txt"
+
+          grep -Fxq 'fabric.mod.json' "$CONTENTS"
+          grep -Fxq 'ninecrowns.mixins.json' "$CONTENTS"
+          grep -Fxq 'it/lia/ninecrowns/NineCrowns.class' "$CONTENTS"
+          grep -Fxq 'it/lia/ninecrowns/ModItems.class' "$CONTENTS"
+          grep -Fxq 'it/lia/ninecrowns/Recipes.class' "$CONTENTS"
+          grep -Fxq 'it/lia/ninecrowns/WorldData.class' "$CONTENTS"
+          grep -Fxq 'data/ninecrowns/recipe/all_heads.json' "$CONTENTS"
+          grep -Fxq 'data/ninecrowns/recipe/op_sword.json' "$CONTENTS"
+          grep -Fxq 'data/ninecrowns/recipe/op_spear.json' "$CONTENTS"
+          grep -Fxq 'data/ninecrowns/recipe/emperor_crown.json' "$CONTENTS"
+          grep -Fxq 'assets/ninecrowns/items/all_heads.json' "$CONTENTS"
+          grep -Fxq 'assets/ninecrowns/models/item/all_heads.json' "$CONTENTS"
+          grep -Fxq 'assets/ninecrowns/textures/item/all_heads.png' "$CONTENTS"
+          grep -Fxq 'assets/ninecrowns/textures/item/op_sword.png' "$CONTENTS"
+          grep -Fxq 'assets/ninecrowns/textures/item/op_spear.png' "$CONTENTS"
+          grep -Fxq 'assets/ninecrowns/models/item/emperor_crown_head.json' "$CONTENTS"
+
+          COUNT="$(grep -c '\.class$' "$CONTENTS")"
+          SIZE="$(stat -c%s "$JAR")"
+          test "$COUNT" -ge 12
+          test "$SIZE" -ge 5000
+
+          echo "JAR_PATH=$JAR" >> "$GITHUB_ENV"
+          echo "VERIFIED: $JAR | classes=$COUNT | bytes=$SIZE"
+
+      - name: Upload verified mod JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: NineCrowns-26.3-v1.6.14-VERIFIED
+          path: ${{ env.JAR_PATH }}
+          if-no-files-found: error
+          retention-days: 30
